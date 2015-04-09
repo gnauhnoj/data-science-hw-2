@@ -13,14 +13,15 @@ def loadData(filename):
     data = data.simplify()
     return data
 
-
+# function to check if size of either of the partitions is less than 3
 def checkZeroSize(group1, group2):
     num1 = len(group1)
     num2 = len(group2)
     if (num1 < 3) or (num2 < 3):
         return True
 
-
+# function to check the ratio of sizes of the partition
+# returns false if the condition is satisfied 
 def ratioCondition(group1, group2):
     num1 = len(group1)
     num2 = len(group2)
@@ -28,12 +29,14 @@ def ratioCondition(group1, group2):
         ratio = float(num2) / num1
     else:
         ratio = float(num1) / num2
-    if ratio < 0.4:
-        return True
-    else:
+    # if ratio is greater than 0.4 then split
+    if ratio > 0.4:
         return False
+    else:
+        return True
 
-
+# function to check if the partitioned clusters increase the modularity as compared to the unpartitioned graph
+# returns false if the condition is satisfied
 def modularityCondition(group1, group2, graph):
     oldMod = 0.0
     newMod = getMod(graph, group1)
@@ -43,7 +46,11 @@ def modularityCondition(group1, group2, graph):
     else:
         return True
 
-
+# function to check if group1 and group2 are good partitions for graph
+# inputs: group1 are the id's of nodes in partition 1
+#         group2 are the id's of nodes in partition 2
+#         graph the unpartitioned graph
+# returns false if the groups give a good partition
 def recCondition(group1, group2, graph):
     # if size too small don't split
     if checkZeroSize(group1, group2):
@@ -183,7 +190,7 @@ if __name__ == '__main__':
         count += 1
     v = ig.VertexClustering(graph, membership=nl)
 
-    # plot top 4 clustering coeffs in D#
+    # plot top 4 clustering coeffs in D3
     subs = v.subgraphs()
     clustering_coeffs = []
     for sub in enumerate(subs):
