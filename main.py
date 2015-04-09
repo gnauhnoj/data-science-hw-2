@@ -1,7 +1,7 @@
 import igraph as ig
 import numpy as np
 import matplotlib.pyplot as plt
-
+from random import shuffle
 
 def loadData(filename):
     data = None
@@ -9,27 +9,51 @@ def loadData(filename):
     data = data.simplify()
     return data
 
+def checkZeroSize(group1,group2):
+    num1 = len(group1)
+    num2 = len(group2)
+    if (num1<3) or (num2<3):
+        return True
 
-def recCondition(group1, group2, graph, oldMod):
-    # num1 = len(group1)
-    # num2 = len(group2)
-    newMod = getMod(graph, group1)
-    if (newMod > oldMod):
-        print 'splitting', oldMod, newMod
-        oldMod = newMod
-        return (False, oldMod)
+def ratioCondition(group1, group2):
+    num1 = len(group1)
+    num2 = len(group2)
+    if num1 > num2:
+        ratio = float(num2) / num1
     else:
-        print 'not splitting', oldMod, newMod
-        return (True, oldMod)
-    # if num1 > num2:
-    #     ratio = float(num2) / num1
-    # else:
-    #     ratio = float(num1) / num2
-    # if ratio < 0.1:
-    #     return True
-    # else:
-    #     return False
+        ratio = float(num1) / num2
+    if ratio < 0.4:
+        return True
+    else:
+        return False
 
+def modularityCondition(group1, group2, graph):
+    oldMod = 0.0
+    newMod = getMod(graph,group1)
+    if (newMod >= oldMod):
+        print 'modularity splitting', oldMod, newMod
+        oldMod = newMod
+        return False
+        # return (False, oldMod)
+    else:
+        print 'modularity not splitting', oldMod, newMod
+        return True
+        # return (True, oldMod)
+
+def recCondition(group1, group2, graph):
+    # if size too small don't split
+    if checkZeroSize(group1,group2):
+        return True
+    c1 = ratioCondition(group1,group2)
+    c2 = modularityCondition(group1,group2,graph)
+    if c1:
+        print 'not splitting'
+        return True
+    else:
+        if c2:
+            return True
+        print 'splitting'
+        return False
 
 def getMod(graph, labels):
     # print len(labels)
@@ -40,7 +64,7 @@ def getMod(graph, labels):
     return graph.modularity(labeled)
 
 
-def processGraph(graph, l, mod=0):
+def processGraph(graph, l):
     laplacian = graph.laplacian(normalized=True)
     e_val, e_vec = np.linalg.eigh(laplacian)
     idx = e_val.argsort()
@@ -60,15 +84,15 @@ def processGraph(graph, l, mod=0):
     x2_neg = np.where(sorted_e_vec_2 <= 0)[0]
 
     tup = recCondition(x2_pos, x2_neg, graph)
-    cond = tup[0]
+    cond = tup
 
     if cond:
         print 'Done - x2 splitt', len(x2_pos), len(x2_neg)
         l.append([graph.vs[i]['name'] for i in sorted_idx])
         return
-    else:
-        mod = tup[1]
-        print 'mod change', mod
+    # else:
+    #     mod = tup[1]
+    #     print 'mod change', mod
     # else:
     #     mod = tup[1]
     #     print mod
@@ -98,19 +122,19 @@ def processGraph(graph, l, mod=0):
 
     print 'lengths l3 cuts', len(pos_pos), len(pos_neg), len(neg_pos), len(neg_neg)
 
-    mod_pos = mod
-    mod_neg = mod
-    tup1 = recCondition(pos_pos, pos_neg, sub_pos, mod_pos)
-    tup2 = recCondition(neg_pos, neg_neg, sub_neg, mod_neg)
-    c1 = tup1[0]
-    c2 = tup2[0]
+    # mod_pos = mod
+    # mod_neg = mod
+    tup1 = recCondition(pos_pos, pos_neg, sub_pos)
+    tup2 = recCondition(neg_pos, neg_neg, sub_neg)
+    c1 = tup1
+    c2 = tup2
 
     if c1 and c2:
         print 'Done - x3 split', len(pos_pos), len(pos_neg), len(neg_pos), len(neg_neg)
         l.append([graph.vs[i]['name'] for i in x2_pos])
         l.append([graph.vs[i]['name'] for i in x2_neg])
     elif c1:
-        mod_neg = tup2[1]
+        # mod_neg = tup2[1]
         print 'Done - x3 neg split', len(pos_pos), len(pos_neg)
         l.append([graph.vs[i]['name'] for i in x2_pos])
         sub_neg_pos = graph.subgraph(neg_pos, implementation="create_from_scratch")
@@ -118,7 +142,7 @@ def processGraph(graph, l, mod=0):
         sub_neg_neg = graph.subgraph(neg_neg, implementation="create_from_scratch")
         processGraph(sub_neg_neg, l)
     elif c2:
-        mod_pos = tup1[1]
+        # mod_pos = tup1[1]
         print 'Done - x3 pos split', len(neg_pos), len(neg_neg)
         l.append([graph.vs[i]['name'] for i in x2_neg])
         sub_pos_pos = graph.subgraph(pos_pos, implementation="create_from_scratch")
@@ -144,32 +168,23 @@ if __name__ == '__main__':
     nl = [0]*len(graph.vs)
     count = 0
     for label in l:
+        # if (len(label)<3):
+        #     community = 0
+        # elif (len(label)<15):
+        #     community = 1
+        # else:
+        #     community = count
+        #     count += 1
         for i in label:
             nl[int(i)] = count
         count += 1
+        
     v = ig.VertexClustering(graph, membership=nl)
-    color_list = [
-        'red',
-        'blue',
-        'green',
-        'cyan',
-        'pink',
-        'orange',
-        'grey',
-        'yellow',
-        'white',
-        'black',
-        'purple',
-        'pink',
-        'maroon',
-        'navy',
-        'tan',
-        'turquoise'
-    ]
+    color_list = shuffle(ig.known_colors.keys())
     # print 'starting layout'
     layout = graph.layout("kk")
     # print 'finishing layout'
-    plot = ig.plot(graph, layout=layout, vertex_color=[color_list[x] for x in v.membership], target="test.png", vertex_size=5)
+    plot = ig.plot(graph, layout=layout, vertex_color=[color_list[x] for x in v.membership], target="test2.png", vertex_size=5)
 
     # dend = graph.community_multilevel()
     # plot = ig.plot(graph, layout=layout, vertex_color=[color_list[x] for x in dend.membership], target="test3.png", vertex_size=5)
