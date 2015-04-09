@@ -2,6 +2,7 @@ import igraph as ig
 import numpy as np
 import matplotlib.pyplot as plt
 from random import shuffle
+import json
 
 def loadData(filename):
     data = None
@@ -34,11 +35,9 @@ def modularityCondition(group1, group2, graph):
         print 'modularity splitting', oldMod, newMod
         oldMod = newMod
         return False
-        # return (False, oldMod)
     else:
         print 'modularity not splitting', oldMod, newMod
         return True
-        # return (True, oldMod)
 
 def recCondition(group1, group2, graph):
     # if size too small don't split
@@ -62,6 +61,23 @@ def getMod(graph, labels):
     # v = ig.VertexClustering(g2)
     # print v.membership
     return graph.modularity(labeled)
+
+
+def writeJSON(graph, labels, clusters, out='data.json'):
+    nodes = [{'name': str(label[0]), 'group': label[1]} for label in enumerate(labels) if label[1] in clusters]
+    cut_nl = {}
+    for node_tup in enumerate(nodes):
+        temp = int(node_tup[1]['name'])
+        cut_nl[temp] = node_tup[0]
+    el = graph.get_edgelist()
+    keys = cut_nl.keys()
+    links = [{"source": cut_nl[edge[0]], "target": cut_nl[edge[1]]} for edge in el if edge[0] in keys and edge[1] in keys]
+    data = {}
+    data['nodes'] = nodes
+    print len(nodes)
+    data['links'] = links
+    with open(out, 'w') as outfile:
+        json.dump(data, outfile)
 
 
 def processGraph(graph, l):
@@ -90,17 +106,6 @@ def processGraph(graph, l):
         print 'Done - x2 splitt', len(x2_pos), len(x2_neg)
         l.append([graph.vs[i]['name'] for i in sorted_idx])
         return
-    # else:
-    #     mod = tup[1]
-    #     print 'mod change', mod
-    # else:
-    #     mod = tup[1]
-    #     print mod
-    #     sub_x2_pos = graph.subgraph(x2_pos, implementation="create_from_scratch")
-    #     processGraph(sub_x2_pos, l, mod)
-    #     sub_x2_neg = graph.subgraph(x2_neg, implementation="create_from_scratch")
-    #     processGraph(sub_x2_neg, l, mod)
-    # return
 
     if (len(e_val) < 3):
         print 'Done - not enough eval 3', len(e_val)
@@ -122,8 +127,6 @@ def processGraph(graph, l):
 
     print 'lengths l3 cuts', len(pos_pos), len(pos_neg), len(neg_pos), len(neg_neg)
 
-    # mod_pos = mod
-    # mod_neg = mod
     tup1 = recCondition(pos_pos, pos_neg, sub_pos)
     tup2 = recCondition(neg_pos, neg_neg, sub_neg)
     c1 = tup1
@@ -178,13 +181,41 @@ if __name__ == '__main__':
         for i in label:
             nl[int(i)] = count
         count += 1
-        
+
     v = ig.VertexClustering(graph, membership=nl)
-    color_list = shuffle(ig.known_colors.keys())
+    color_list = ig.known_colors.keys()
+    shuffle(color_list)
+    # color_list = [
+    #     'red',
+    #     'blue',
+    #     'green',
+    #     'cyan',
+    #     'pink',
+    #     'orange',
+    #     'grey',
+    #     'yellow',
+    #     'white',
+    #     'black',
+    #     'purple',
+    #     'pink',
+    #     'maroon',
+    #     'navy',
+    #     'tan',
+    #     'turquoise'
+    # ]
     # print 'starting layout'
     layout = graph.layout("kk")
     # print 'finishing layout'
     plot = ig.plot(graph, layout=layout, vertex_color=[color_list[x] for x in v.membership], target="test2.png", vertex_size=5)
 
+    # plot any communities of size < 1000
+    subs = v.subgraphs()
+    clustering_coeffs = []
+    for sub in subs:
+        clustering_coeffs += [sub.transitivity_undirected()]
+    clusters = [item[0] for item in enumerate(l) if len(item[1]) < 1000]
+    writeJSON(graph, v.membership, clusters)
+
+    # louvain
     # dend = graph.community_multilevel()
     # plot = ig.plot(graph, layout=layout, vertex_color=[color_list[x] for x in dend.membership], target="test3.png", vertex_size=5)
