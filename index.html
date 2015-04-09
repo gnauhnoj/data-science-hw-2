@@ -32,7 +32,7 @@ h3 {
 
 .link {
   stroke: #999;
-  stroke-opacity: .3;
+  stroke-opacity: .4;
   stroke-width: 0.7px;
 }
 
@@ -94,15 +94,13 @@ h3 {
 }
 
 </style>
-<h1> CS5304 HW2: Community Detection Visualization </h1>
-<h2> Dataset: SNAP social circles - Facebook </h2>
-<h3> Authors: jhh283, rj288 </h3>
 <body>
+<h1> CS5304 HW2: Community Detection Visualization </h1>
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"> </script>
 <script>
 
-var color = d3.scale.category20();
+var color = d3.scale.category10();
 
 var force = d3.layout.force()
     .charge(-5)
@@ -185,3 +183,6 @@ d3.json("data.json", function(error, graph) {
 });
 
 </script>
+<h2> Dataset: SNAP social circles - Facebook </h2>
+<h3> Authors: jhh283, rj288 </h3>
+</body>
